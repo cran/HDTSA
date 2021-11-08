@@ -28,6 +28,7 @@
 #' @importFrom stats lm
 #' @useDynLib HDTSA
 #' @importFrom Rcpp sourceCpp
+#' @importFrom stats qnorm
 #' @importFrom Rcpp evalCpp
 #' @import Rcpp
 #' @examples
@@ -49,11 +50,15 @@ ur.test <- function(Y, lagk.vec=lagk.vec, con_vec=con_vec, alpha=alpha) {
   if(is.null(args$con_vec)){
     con_vec=0.55;
   }
-  Tnvec=NULL; nm=NULL;
+  Tnvec=NULL; nm=NULL; colnm=NULL;
+  
+  for (i in con_vec)colnm = c(colnm, paste("con=", i, sep=""))
+  
   for(kk in 1:length(lagk.vec)){
     
     K0=lagk.vec[kk]+1                       #eg. K0=1, gamma(0)
     nm=c(nm,paste("K0=", K0-1, sep=""))
+    
     
     n=length(Y)                           ## sample size
     N=floor(n/2)
@@ -118,13 +123,14 @@ ur.test <- function(Y, lagk.vec=lagk.vec, con_vec=con_vec, alpha=alpha) {
           th_d=10^5                                  ## truncated belongs to H0
         }  else{th_d=0.1*log(N)}                     ## truncated belongs to H1
         
-        cv=min(1.645*sqrt(lr_Qt)+T1, th_d)
+        cv=min(qnorm(1-alpha)*sqrt(lr_Qt)+T1, th_d)
         Tnvec=c(Tnvec, T2>cv)
       }
     }
   }
   res.table=matrix(as.numeric(Tnvec), length(lagk.vec), byrow=T)
   rownames(res.table)=nm        #rownames ("K0=1", "K0=2")
+  colnames(res.table) = colnm
   return(list(result=res.table))
   
 }
