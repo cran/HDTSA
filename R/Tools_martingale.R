@@ -18,7 +18,10 @@
 #'   default option is \code{'Linear'} means linear identity 
 #'   map (\eqn{\boldsymbol \phi({\bf x})={\bf x}}). Also including another 
 #'   option \code{'Quad'} (Both linear and quadratic terms 
-#'   \eqn{\boldsymbol \phi({\bf x})=\{{\bf x}',({\bf x}^2)'\}'}). 
+#'   \eqn{\boldsymbol \phi({\bf x})=\{{\bf x}',({\bf x}^2)'\}'}). Also the users
+#'   can choose set the map themselves, use for example \code{expression(X, X^2)},
+#'    \code{quote(X, X^2)}, \code{parse(X, X^2)}, \code{substitute(X, X^2)} or 
+#'    just map without function (such as cbind(X, X^2)) to set their own map. 
 #'   See Section 2.1 in Chang, Jiang and Shao (2021) for more information.
 #' @param alpha The prescribed significance level. Default is 0.05.
 #' @param kernel.type String, an option for choosing the symmetric kernel 
@@ -40,20 +43,81 @@
 #' n <- 200
 #' p <- 10
 #' X <- matrix(rnorm(n*p),n,p)
-#' res <- MartG_test(X)
+#' res <- MartG_test(X, type="Linear")
+#' res <- MartG_test(X, type=cbind(X, X^2)) #the same as Linear type
+#' res <- MartG_test(X, type=quote(cbind(X, X^2))) # expr using quote
+#' res <- MartG_test(X, type=substitute(cbind(X, X^2))) # expr using substitute
+#' res <- MartG_test(X, type=expression(cbind(X, X^2))) # expr using expression
+#' res <- MartG_test(X, type=parse(text="cbind(X, X^2)")) # expr using parse
+#' map_fun <- function(X) {X <- cbind(X,X^2); X}
+#' res <- MartG_test(X, type=map_fun)
 #' Pvalue <- res$p.value
 #' rej <- res$reject
 #' @useDynLib HDTSA
 #' @importFrom Rcpp sourceCpp
 #' @importFrom Rcpp evalCpp
+#' @importFrom methods formalArgs
 #' @import Rcpp
 #' @export
 
 
 MartG_test <- function (X, lag.k=2, B=1000, type=c('Linear','Quad'), 
                       alpha=0.05, kernel.type=c('QS','Par','Bart')) {
+  data_name <- all.vars(substitute(X))
+  if (is.character(type)) {
+    type <- match.arg(type)
+    if (type == 'Linear') {
+      Xj <- X
+      d <- ncol(Xj)
+      } 
+    if (type == 'Quad'){
+      Xj <- cbind(X,X^2)
+      d <- ncol(Xj)
+      }
+    storage.mode(d) <- "integer"
+  }
+  else if (is.name(type)){
+    varnames_expr <- all.vars(type)
+    if (data_name != varnames_expr) 
+      stop("expr is not validate, The variable name is different from the data name.")
+    # print(type)
+    Xj <- eval(type) 
+    d <- ncol(Xj)
+  }
+  else if (is.call(type) || is.expression(type)){
+    varnames_expr <- all.vars(type)
+    if (length(varnames_expr) != 1)
+      stop("expr is not validate, only support one data name and expr must include data name.")
+    if (data_name != varnames_expr)
+      stop("expr is not validate, The variable name is different from the data name.")
+    #print(type)
+    Xj <- eval(type)
+    d <- ncol(Xj)
+  }
+  else if(is.function(type)){
+    f <- type
+    f_para <- formalArgs(f)
+    varnames_expr <- f_para[1]
+    if (data_name != varnames_expr)
+      stop("function is not validate, The first argument of function is different
+           from the data name.")
+    if(!is.null(args) && length(f_para)>1)
+      Xj <- do.call(f, args=c(list(X),args))
+    else Xj <- f(X)
+    d <- ncol(Xj)
+  }
+  else {
+    expr <- substitute(type)
+    varnames_expr <- all.vars(expr)
+    if (length(varnames_expr) != 1)
+      stop("expr is not validate, only support one data name.")
+    if (data_name != varnames_expr)
+      stop("expr is not validate, The variable name is different from the data name.")
+   # print(expr)
+    Xj <- eval(expr)
+    d <- ncol(Xj)
+  }
   
-  type <- match.arg(type)
   kernel.type <- match.arg(kernel.type)
   ken_type <- switch(kernel.type,
                         "QS" = 1,
@@ -66,27 +130,7 @@ MartG_test <- function (X, lag.k=2, B=1000, type=c('Linear','Quad'),
   storage.mode(n) <- "integer"
   
   # ---------- step 1: Transformation function ----------
-  if (type == 'Linear') {
-    Xj <- X
-    d <- ncol(Xj)
-  } 
-  if (type == 'Quad'){
-    Xj <- cbind(X,X^2)
-    d <- ncol(Xj)
-  }
-  # if (type == 'In'){
-  #   InX <- matrix(NA,nrow = n, ncol = p*(p-1)/2)
-  #   flag <- 1
-  #   for (i  in c(1:(p-1))) {
-  #     for (j in c((i+1):p)) {
-  #       InX[,flag] <- X[,i] * X[,j]
-  #       flag <- flag + 1
-  #     }
-  #   }
-  #   Xj <- cbind(X, X^2, InX)
-  #   d <- ncol(Xj)
-  # }
-  storage.mode(d) <- "integer"
+  
   
   # ---------- step 2: compute test statistic ----------
   Tn <- MartG_TestStatC(n, lag.k, X, Xj)

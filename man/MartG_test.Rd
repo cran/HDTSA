@@ -29,7 +29,10 @@ Default is \code{B} \eqn{=2000}.}
 default option is \code{'Linear'} means linear identity 
 map (\eqn{\boldsymbol \phi({\bf x})={\bf x}}). Also including another 
 option \code{'Quad'} (Both linear and quadratic terms 
-\eqn{\boldsymbol \phi({\bf x})=\{{\bf x}',({\bf x}^2)'\}'}). 
+\eqn{\boldsymbol \phi({\bf x})=\{{\bf x}',({\bf x}^2)'\}'}). Also the users
+can choose set the map themselves, use for example \code{expression(X, X^2)},
+ \code{quote(X, X^2)}, \code{parse(X, X^2)}, \code{substitute(X, X^2)} or 
+ just map without function (such as cbind(X, X^2)) to set their own map. 
 See Section 2.1 in Chang, Jiang and Shao (2021) for more information.}
 
 \item{alpha}{The prescribed significance level. Default is 0.05.}
@@ -60,7 +63,14 @@ MDS is the abbreviation of "martingale difference sequence".
 n <- 200
 p <- 10
 X <- matrix(rnorm(n*p),n,p)
-res <- MartG_test(X)
+res <- MartG_test(X, type="Linear")
+res <- MartG_test(X, type=cbind(X, X^2)) #the same as Linear type
+res <- MartG_test(X, type=quote(cbind(X, X^2))) # expr using quote
+res <- MartG_test(X, type=substitute(cbind(X, X^2))) # expr using substitute
+res <- MartG_test(X, type=expression(cbind(X, X^2))) # expr using expression
+res <- MartG_test(X, type=parse(text="cbind(X, X^2)")) # expr using parse
+map_fun <- function(X) {X <- cbind(X,X^2); X}
+res <- MartG_test(X, type=map_fun)
 Pvalue <- res$p.value
 rej <- res$reject
 }
