@@ -19,7 +19,7 @@
 #'   Zhou (2017) for more information. If \code{TRUE}, then the segment
 #'   procedure will be performed to data \code{X} first. The three additional
 #'   options including \code{thresh}, \code{tuning.vec} and \code{cv.num} are
-#'   the same as those in \code{\link{PCA4_TS}}.
+#'   the same as those in \code{\link{PCA_TS}}.
 #' @param alpha The prescribed significance level. Default is 0.05.
 #' @param kernel.type String, an option for choosing the symmetric kernel used
 #'   in the estimation of long-run covariance matrix, for example, \code{'QS'}
@@ -27,23 +27,26 @@
 #'   (Bartlett kernel), see Andrews (1991) for more information. Default option
 #'   is\code{kernel.type = 'QS'}.
 #' @param k0 A positive integer specified to calculate \eqn{\widehat{{\bf
-#'   W}}_y}. See parameter \code{lag.k} in \code{\link{PCA4_TS}} for more
+#'   W}}_y}. See parameter \code{lag.k} in \code{\link{PCA_TS}} for more
 #'   information.
 #' @param thresh Logical. It determines whether to perform the threshold method
 #'   to estimate \eqn{\widehat{{\bf W}}_y} or not. See parameter \code{thresh}
-#'   in \code{\link{PCA4_TS}} for more information.
+#'   in \code{\link{PCA_TS}} for more information.
 #' @param tuning.vec The value of thresholding tuning parameter \eqn{\lambda}.
-#'   See parameter \code{tuning.vec} in \code{\link{PCA4_TS}} for more
+#'   See parameter \code{tuning.vec} in \code{\link{PCA_TS}} for more
 #'   information.
-#' @seealso \code{\link{PCA4_TS}}
+#' @seealso \code{\link{PCA_TS}}
 #'
-#' @return An object of class "WN_test" is a list containing the following
+#' @return An object of class "hdtstest" is a list containing the following
 #'   components:
 #'
-#'   \item{reject}{Logical value. If \code{TRUE}, it means rejecting the null
-#'   hypothesis, otherwise it means not rejecting the null hypothesis.}
+#'   \item{statistic}{The value of the test statistic.}
 #'   \item{p.value}{Numerical value which represents the p-value of the test
 #'   based on the observed data \eqn{\{{\bf x}_t\}_{t=1}^n}.}
+#'   \item{lag.k}{The time lag used in function.}
+#'   \item{method}{A character string indicating what method was performed.}
+#'   \item{kernel.type}{A character string indicating what kenel method was performed.}
+#'   
 #' @references Chang, J., Yao, Q. & Zhou, W. (2017). \emph{Testing for
 #'   high-dimensional white noise using maximum cross-correlations}, Biometrika,
 #'   Vol. 104, pp. 111–127.
@@ -69,38 +72,48 @@
 #' @import Rcpp
 #' @export
 
-WN_test = function(X, lag.k=2, B=2000, 
-                   kernel.type=c('QS','Par','Bart'), 
-                   pre=FALSE,alpha=0.05,k0=5,thresh=FALSE,
-                   tuning.vec=NULL){
-  
+WN_test = function(X, lag.k = 2, B = 2000, 
+                   kernel.type = c('QS','Par','Bart'), 
+                   pre = FALSE, alpha = 0.05,k0 = 5, thresh = FALSE,
+                   tuning.vec = NULL){
+  data_name <- deparse(substitute(X))
   kernel.type <- match.arg(kernel.type)
   ken_type <- switch(kernel.type,
                      "QS" = 1,
                      "Par" = 2,
                      "Bart" = 3)
   
-  if (pre==T){
-    X_pre = PCA4_TS(X, lag.k=k0, 
-                    thresh=thresh, just4pre = pre, 
+  if (pre == TRUE){
+    X_pre <- PCA_TS(X, lag.k=k0, 
+                    thresh=thresh, just4pre = TRUE, 
                     tuning.vec = tuning.vec)
-    X = X_pre$X
-    Bx = X_pre$B
+    
+    X <- X_pre$Z
+    Bx <- X_pre$B
   }
-  n = nrow(X)
-  p = ncol(X)
+  n <- nrow(X)
+  p <- ncol(X)
   
-  Tn_list = WN_teststatC(X,n,p,lag.k)
-  Tn = Tn_list$Tn
-  sigma_zero = Tn_list$sigma_zero
-  X_mean = Tn_list$X_mean
+  Tn_list <- WN_teststatC(X,n,p,lag.k)
+  Tn <- Tn_list$Tn
+  sigma_zero <- Tn_list$sigma_zero
+  X_mean <- Tn_list$X_mean
   
-  ft = WN_ftC(n,lag.k,p,X,X_mean)
-  bn = WN_bandwith(ft,lag.k,p,ken_type)
+  ft <- WN_ftC(n, lag.k, p, X, X_mean)
+  bn <- bandwith(ft, lag.k, p, p, ken_type)
   
-  Gnstar = WN_bootc(n,lag.k,p,B,bn,ken_type,ft,X,sigma_zero) # critical value
-  p.value = mean(Gnstar>Tn)
-  Results = list(reject = (p.value<0.05), p.value = p.value)
+  Gnstar <- WN_bootc(n, lag.k, p, B, bn, ken_type, ft, X, sigma_zero) # critical value
+  p.value <- mean(Gnstar > Tn)
+  # Results = list(reject = (p.value<0.05), p.value = p.value)
   
-  return(Results)
+  names(Tn) <- "Statistic"
+  names(lag.k) <-"Time lag"
+  names(kernel.type) <- "Symmetric kernel"
+  METHOD <- "Testing for white noise hypothesis in high dimension"
+  structure(list(statistic = Tn, p.value = p.value, lag.k=lag.k,
+                 method = METHOD, 
+                 kernel = kernel.type),
+            class = "hdtstest")
+  
+  # return(Results)
 }

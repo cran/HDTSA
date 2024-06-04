@@ -40,30 +40,32 @@ procedure on data matrix \code{X} or not, see Remark 1 in Chang, Yao and
 Zhou (2017) for more information. If \code{TRUE}, then the segment
 procedure will be performed to data \code{X} first. The three additional
 options including \code{thresh}, \code{tuning.vec} and \code{cv.num} are
-the same as those in \code{\link{PCA4_TS}}.}
+the same as those in \code{\link{PCA_TS}}.}
 
 \item{alpha}{The prescribed significance level. Default is 0.05.}
 
 \item{k0}{A positive integer specified to calculate \eqn{\widehat{{\bf
-W}}_y}. See parameter \code{lag.k} in \code{\link{PCA4_TS}} for more
+W}}_y}. See parameter \code{lag.k} in \code{\link{PCA_TS}} for more
 information.}
 
 \item{thresh}{Logical. It determines whether to perform the threshold method
 to estimate \eqn{\widehat{{\bf W}}_y} or not. See parameter \code{thresh}
-in \code{\link{PCA4_TS}} for more information.}
+in \code{\link{PCA_TS}} for more information.}
 
 \item{tuning.vec}{The value of thresholding tuning parameter \eqn{\lambda}.
-See parameter \code{tuning.vec} in \code{\link{PCA4_TS}} for more
+See parameter \code{tuning.vec} in \code{\link{PCA_TS}} for more
 information.}
 }
 \value{
-An object of class "WN_test" is a list containing the following
+An object of class "hdtstest" is a list containing the following
   components:
 
-  \item{reject}{Logical value. If \code{TRUE}, it means rejecting the null
-  hypothesis, otherwise it means not rejecting the null hypothesis.}
+  \item{statistic}{The value of the test statistic.}
   \item{p.value}{Numerical value which represents the p-value of the test
   based on the observed data \eqn{\{{\bf x}_t\}_{t=1}^n}.}
+  \item{lag.k}{The time lag used in function.}
+  \item{method}{A character string indicating what method was performed.}
+  \item{kernel.type}{A character string indicating what kenel method was performed.}
 }
 \description{
 \code{WN_test()} is the test proposed in Chang, Yao and Zhou
@@ -93,5 +95,5 @@ Chang, J., Yao, Q. & Zhou, W. (2017). \emph{Testing for
   Association, Vol. 106, pp. 672--684.
 }
 \seealso{
-\code{\link{PCA4_TS}}
+\code{\link{PCA_TS}}
 }

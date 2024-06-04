@@ -23,7 +23,7 @@ statistic. Default is \code{lag.k} \eqn{=2}.}
 
 \item{B}{Bootstrap times for generating multivariate normal distributed 
 random vectors in calculating the critical value. 
-Default is \code{B} \eqn{=2000}.}
+Default is \code{B} \eqn{=1000}.}
 
 \item{type}{String, a map is chosen by the \proglang{R} users, such as the
 default option is \code{'Linear'} means linear identity 
@@ -45,12 +45,15 @@ for example, \code{'QS'} (Quadratic spectral kernel),
 information. Default option is \code{kernel.type = 'QS'}.}
 }
 \value{
-An object of class "MartG_test" is a list containing the following
+An object of class "hdtstest" is a list containing the following
   components:
-
-  \item{reject}{Logical value. If \code{TRUE}, it means rejecting the null
-  hypothesis, otherwise it means not rejecting the null hypothesis. }
+   
+.  \item{statistic}{The value of the test statistic.}
   \item{p.value}{Numerical value which represents the p-value of the test.}
+  \item{lag.k}{The time lag used in function.}
+  \item{method}{A character string indicating what method was performed.}
+  \item{type}{A character string which map used on data matrix \code{X}.}
+  \item{kernel.type}{A character string indicating what kenel method was performed.}
 }
 \description{
 \code{MartG_test()} implements a new test proposed in
@@ -75,6 +78,7 @@ Pvalue <- res$p.value
 rej <- res$reject
 }
 \references{
-Chang, J., Jiang, Q. & Shao, X. (2021). \emph{Testing the
-  martingale difference hypothesis in high dimension}.
+Chang, J., Jiang, Q. & Shao, X. (2022). \emph{Testing the
+  martingale difference hypothesis in high dimension}.  Journal of 
+  Econometrics, in press
 }

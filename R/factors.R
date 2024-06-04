@@ -1,6 +1,6 @@
-#' @name factors
+#' @name Factors
 #' @title Factor modeling: Inference for the number of factors
-#' @description \code{factors()} deals with factor modeling for high-dimensional
+#' @description \code{Factors()} deals with factor modeling for high-dimensional
 #' time series proposed in Lam and Yao (2012):\deqn{{\bf y}_t = {\bf Ax}_t +
 #' {\boldsymbol{\epsilon}}_t, } where \eqn{{\bf x}_t} is an \eqn{r \times 1}
 #' latent process with (unknown) \eqn{r \leq p}, \eqn{{\bf A}} is a \eqn{p
@@ -29,8 +29,14 @@
 
 #' @return An object of class "factors" is a list containing the following
 #'   components: \item{factor_num}{The estimated number of factors
-#'   \eqn{\hat{r}}.} \item{loading.mat}{The estimated \eqn{p \times r} factor
+#'   \eqn{\hat{r}}.} 
+#'   \item{loading.mat}{The estimated \eqn{p \times r} factor
 #'   loading matrix \eqn{\widehat{\bf A}}.}
+#'   \item{lag.k}{the time lag used in function.}
+#'   \item{method}{a character string indicating what method was performed.}
+#'   
+#'  
+
 #' @references Lam, C. & Yao, Q. (2012). \emph{Factor modelling for
 #'   high-dimensional time series: Inference for the number of factors}, The
 #'   Annals of Statistics, Vol. 40, pp. 694--726.
@@ -48,7 +54,7 @@
 #' X <- t(cbind(x1, x2, x3))
 #' Y <- A %*% X + eps
 #' Y <- t(Y)
-#' fac <- factors(Y,lag.k=2)
+#' fac <- Factors(Y,lag.k=2)
 #' r_hat <- fac$factor_num
 #' loading_Mat <- fac$loading.mat
 #' @useDynLib HDTSA
@@ -59,8 +65,8 @@
 
 
 
-factors <- function (Y,lag.k=5,twostep=FALSE) {
-  
+Factors <- function (Y, lag.k=5, twostep=FALSE) 
+{
   n <- nrow(Y)
   p <- ncol(Y)
   r <- 0
@@ -108,11 +114,17 @@ factors <- function (Y,lag.k=5,twostep=FALSE) {
       final_vector <- cbind(final_vector, G[, c(1:r)])
     }
   }
-  outlist <- list(factor_num = r, loading.mat = final_vector)
-  class(outlist) <- c("factors")
-  return(outlist)
-    
-    #extension: two step method
+  
+  PARAMETER <- twostep
+  METHOD <- "Inference for the number of factors"
+  names(r) <- "The estimated number of factors"
+  names(lag.k) <-"Time lag"
+  #outlist$call <- match.call(expand.dots = FALSE)
+  #outlist <- list(factor_num = r, loading.mat = final_vector)
+  #class(outlist) <- c("factors")
+  structure(list(factor_num = r, loading.mat = final_vector, lag.k=lag.k,
+                 method = METHOD),
+            class = "factors")
     
 
 }

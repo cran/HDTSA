@@ -9,14 +9,6 @@ MartG_ftC <- function(n, k, p, d, X, Xj) {
     .Call('_HDTSA_MartG_ftC', PACKAGE = 'HDTSA', n, k, p, d, X, Xj)
 }
 
-MartG_XiC <- function(n, k, p, B, bn, ken_sign) {
-    .Call('_HDTSA_MartG_XiC', PACKAGE = 'HDTSA', n, k, p, B, bn, ken_sign)
-}
-
-MartG_bandwith <- function(ft, k, p, d, ken_type) {
-    .Call('_HDTSA_MartG_bandwith', PACKAGE = 'HDTSA', ft, k, p, d, ken_type)
-}
-
 MartG_bootc <- function(n, k, p, d, B, bn, method, ft) {
     .Call('_HDTSA_MartG_bootc', PACKAGE = 'HDTSA', n, k, p, d, B, bn, method, ft)
 }
@@ -41,15 +33,71 @@ WN_ftC <- function(n, k, p, X, X_mean) {
     .Call('_HDTSA_WN_ftC', PACKAGE = 'HDTSA', n, k, p, X, X_mean)
 }
 
-WN_XiC <- function(n, k, p, B, bn, ken_sign) {
-    .Call('_HDTSA_WN_XiC', PACKAGE = 'HDTSA', n, k, p, B, bn, ken_sign)
-}
-
-WN_bandwith <- function(ft, k, p, ken_type) {
-    .Call('_HDTSA_WN_bandwith', PACKAGE = 'HDTSA', ft, k, p, ken_type)
-}
-
 WN_bootc <- function(n, k, p, B, bn, method, ft, X, sigma_zero) {
     .Call('_HDTSA_WN_bootc', PACKAGE = 'HDTSA', n, k, p, B, bn, method, ft, X, sigma_zero)
+}
+
+bandwith <- function(ft, k, p, d, ken_type) {
+    .Call('_HDTSA_bandwith', PACKAGE = 'HDTSA', ft, k, p, d, ken_type)
+}
+
+TaperQsC <- function(x) {
+    .Call('_HDTSA_TaperQsC', PACKAGE = 'HDTSA', x)
+}
+
+TaperBartC <- function(x) {
+    .Call('_HDTSA_TaperBartC', PACKAGE = 'HDTSA', x)
+}
+
+TaperFlatC <- function(x, c) {
+    .Call('_HDTSA_TaperFlatC', PACKAGE = 'HDTSA', x, c)
+}
+
+CmpGammaC <- function(Vt) {
+    .Call('_HDTSA_CmpGammaC', PACKAGE = 'HDTSA', Vt)
+}
+
+EvalGammaJC <- function(Gamma, j, len) {
+    .Call('_HDTSA_EvalGammaJC', PACKAGE = 'HDTSA', Gamma, j, len)
+}
+
+CmpRhoC <- function(Gamma, len) {
+    .Call('_HDTSA_CmpRhoC', PACKAGE = 'HDTSA', Gamma, len)
+}
+
+EvalRhoMC <- function(Rho, m, len) {
+    .Call('_HDTSA_EvalRhoMC', PACKAGE = 'HDTSA', Rho, m, len)
+}
+
+CmpHatSC <- function(Rho, C0, KT, cef, p, len) {
+    .Call('_HDTSA_CmpHatSC', PACKAGE = 'HDTSA', Rho, C0, KT, cef, p, len)
+}
+
+SpecEstC <- function(Gamma, n, p, r, K, cross_indices, J_set, l_band, flag_c) {
+    .Call('_HDTSA_SpecEstC', PACKAGE = 'HDTSA', Gamma, n, p, r, K, cross_indices, J_set, l_band, flag_c)
+}
+
+CEst2C <- function(x, Gamma, n_tilde, n, p, r, cross_indices, l_band) {
+    .Call('_HDTSA_CEst2C', PACKAGE = 'HDTSA', x, Gamma, n_tilde, n, p, r, cross_indices, l_band)
+}
+
+BandEstC <- function(Chat, n_tilde, r, l_band, type) {
+    .Call('_HDTSA_BandEstC', PACKAGE = 'HDTSA', Chat, n_tilde, r, l_band, type)
+}
+
+etaC <- function(n, p, B, n_tilde, bn, type) {
+    .Call('_HDTSA_etaC', PACKAGE = 'HDTSA', n, p, B, n_tilde, bn, type)
+}
+
+LongCovEstC <- function(n_tilde, ln, r, Shat_c, Chat, Kern) {
+    .Call('_HDTSA_LongCovEstC', PACKAGE = 'HDTSA', n_tilde, ln, r, Shat_c, Chat, Kern)
+}
+
+minor_P <- function(Wr, Ws, d1, d2) {
+    .Call('_HDTSA_minor_P', PACKAGE = 'HDTSA', Wr, Ws, d1, d2)
+}
+
+Vech2Mat_new <- function(P, d) {
+    .Call('_HDTSA_Vech2Mat_new', PACKAGE = 'HDTSA', P, d)
 }
 
