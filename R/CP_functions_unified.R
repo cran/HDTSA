@@ -49,7 +49,7 @@
 #' q = 10
 #' n = 400
 #' d = d1 = d2 = 3
-#' data <- DGP.CP(n,p,q,d,d1,d2)
+#' data <- DGP.CP(n,p,q,d1,d2,d)
 #' Y = data$Y
 #' res1 <- CP_MTS(Y,method = "CP.Direct")
 #' res2 <- CP_MTS(Y,method = "CP.Refined")
@@ -63,6 +63,7 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
   if(is.null(xi)){
     xi = est.xi(Y)
   }
+  method <- match.arg(method)
   if(method == "CP.Direct"){
     S_yxi_1 = Autocov_xi_Y(Y,xi,lag.k = 1)
     S_yxi_2 = Autocov_xi_Y(Y,xi,lag.k = 2)
@@ -73,31 +74,31 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
       w = eg1$values
       ww = w[-1]/w[-length(w)]
       d = which(ww==min(ww[1:floor(0.75*q)]))
-
+      
       if (d > 1){
         K1 = eg1$vectors[,1:d]%*%diag(eg1$values[1:d])%*%t(eg1$vectors[,1:d]);
       }else{
         K1 = eg1$vectors[,1]%*%diag(eg1$values[1],1)%*%t(eg1$vectors[,1]);
       }
-        K2 = t(S_yxi_1)%*%S_yxi_2;
-
+      K2 = t(S_yxi_1)%*%S_yxi_2;
+      
       ##(2) estimation of A and B
       Geg = geigen::geigen(K2,K1);
       evalues = Geg$values[which(Mod(Geg$values)<=10^5&Geg$values!=0)]
-
+      
       Bl = Geg$vectors[,which(Geg$values %in% evalues)]
       A = apply(S_yxi_1%*%Bl,2,l2s)
       Al = t(MASS::ginv(A))
       B = apply(t(S_yxi_1)%*%Al,2,l2s)
     }else{
-
+      
       ##(1) estimation of d
       K1 = S_yxi_1%*%t(S_yxi_1)
       eg1 = eigen(K1)
       w = eg1$values
       ww = w[-1]/w[-length(w)]
       d = which(ww==min(ww[1:floor(0.75*p)]))
-
+      
       if (d > 1){
         K1 = eg1$vectors[,1:d]%*%diag(eg1$values[1:d])%*%t(eg1$vectors[,1:d]);
       }else{
@@ -118,7 +119,7 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
       H[,ii] = B[,ii] %x% A[,ii]
     }
     f = Vec.tensor(Y)%*%H%*%MASS::ginv(t(H)%*%H)
-
+    
     if(is.complex(A) == T || is.complex(B) == T ){
       A = Complex2Real(A)
       B = Complex2Real(B)
@@ -134,7 +135,7 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
     ##(1) estimation of P,Q and d
     M1 = M2 = 0
     dmax = round(min(p,q)*0.75)
-
+    
     for (kk in 1:lag.k){
       S_yxi_k = Autocov_xi_Y(Y,xi,lag.k = kk)
       M1 = M1 + S_yxi_k%*%t(S_yxi_k)
@@ -142,28 +143,28 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
     }
     ev_M1 = eigen(M1)
     ev_M2 = eigen(M2)
-
+    
     d1 =  which.max(ev_M1$values[1:dmax]/ev_M1$values[2:(dmax+1)])
     d2 =  which.max(ev_M2$values[1:dmax]/ev_M2$values[2:(dmax+1)])
-
+    
     d   = ifelse(p>q,d1,d2)
-
+    
     if(!is.null(Rank)){
       d = Rank
     }
-      P = ev_M1$vectors[,1:d]
-      Q = ev_M2$vectors[,1:d]
-
+    P = ev_M1$vectors[,1:d]
+    Q = ev_M2$vectors[,1:d]
+    
     if(d == 1){
       A = as.matrix(P)
       B = as.matrix(Q)
-
+      
       f = vector()
       for (tt in 1:n) {
         f[tt] = t(A)%*%Y[tt,,]%*%B
       }
       f = as.matrix(f)
-
+      
     }else{
       ##(2) estimation of U and V
       Z = array(NA,dim = c(n,d,d))
@@ -173,34 +174,34 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
       xi =  est.xi(Z)
       S_Zxi_1 = Autocov_xi_Y(Z,xi,lag.k = 1)
       S_Zxi_2 = Autocov_xi_Y(Z,xi,lag.k = 2)
-
+      
       vl = eigen(MASS::ginv(t(S_Zxi_1)%*%S_Zxi_1)%*%t(S_Zxi_1)%*%S_Zxi_2)$vectors ##MASS
       ul = eigen(MASS::ginv(S_Zxi_1%*%t(S_Zxi_1))%*%S_Zxi_1%*%t(S_Zxi_2))$vectors
-
+      
       U = apply(S_Zxi_1%*%vl,2,l2s)
       V = apply(t(S_Zxi_1)%*%ul,2,l2s)
-
+      
       ##(3) estimation of A and B
       A = P%*%U
       B = Q%*%V
-
+      
       ##(4) estimation of Xt
       W = matrix(NA,d^2,d)
-
+      
       for (ii in 1:d) {
         W[,ii] = V[,ii]%x%U[,ii]
       }
-
+      
       f = Vec.tensor(Z)%*%W%*%solve(t(W)%*%W)
-
+      
       if(is.complex(A) == T || is.complex(B) == T ){
         A = Complex2Real(A)
         B = Complex2Real(B)
         f = Complex2Real(f)
       }
     }
-      METHOD <- c("Estimation of matrix CP-factor model",paste("Method:",method))
-      names(d) <- "The estimated rank of the matrix CP-factor model"
+    METHOD <- c("Estimation of matrix CP-factor model",paste("Method:",method))
+    names(d) <- "The estimated rank of the matrix CP-factor model"
     con = structure(list(A = A,B = B,f = f,Rank = d, method = METHOD),
                     class = "mtscp")
     return(con)
@@ -208,28 +209,28 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
   if(method == "CP.Unified"){
     ##(1) estimation of P,Q and d1,d2
     if(is.null(Rank)){
-
+      
       PQ_hat_tol = est.d1d2.PQ(Y,xi,K = lag.k)
-
+      
       d1  = PQ_hat_tol$d1_hat
       d2  = PQ_hat_tol$d2_hat
       d   = NULL
       P   = PQ_hat_tol$P_hat
       Q   = PQ_hat_tol$Q_hat
-
+      
       if(d1 == 1 || d2 == 1){d = d1*d2}
-
+      
     }else{
-
+      
       d   = Rank$d
       d1  = Rank$d1
       d2  = Rank$d2
-
+      
       PQ_hat_tol = est.PQ(Y,xi,d1,d2,K = lag.k)
-
+      
       P   = PQ_hat_tol$P_hat
       Q   = PQ_hat_tol$Q_hat
-
+      
     }
     ##(2) estimation of W* = (v1*u1,v2*u2,...,vd*ud)H = WH
     if(d1 == 1 & d2 == 1){
@@ -240,7 +241,7 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
       }
       A = P
       B = Q
-
+      
       # con = list(A = A,B = B,f = f,Rank = list(d=d,d1=d1,d2=d2))
       METHOD <- c("Estimation of matrix CP-factor model",paste("Method:",method))
       rank <- list(d=d,d1=d1,d2=d2)
@@ -249,10 +250,10 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
                        "The estimated rankd d2 of the matrix CP-factor model")
       con = structure(list(A = A,B = B,f = f,Rank = rank, method = METHOD),
                       class = "mtscp")
-
+      
       return(con)
     }else{
-
+      
       if(is.null(d)){
         W_hat_tol  =  est.d.Wf(Y,P,Q,Ktilde =  lag.ktilde)
         d          =  W_hat_tol$d_hat
@@ -264,7 +265,7 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
         W          =  W_hat_tol$W_hat
         f          =  W_hat_tol$f_hat
       }
-
+      
       ##(3) estimation of U and V
       if(d1 == 1 || d2 == 1){
         Theta = NULL
@@ -285,15 +286,15 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
         U = as.matrix(U)
         V = as.matrix(V)
       }else{
-
+        
         UV_hat_tol = est.UV.JAD(W,d1,d2,d)
-
+        
         U          = UV_hat_tol$U
         V          = UV_hat_tol$V
         Theta      = UV_hat_tol$Theta
       }
-
-
+      
+      
       ##(4) estimation of A and B
       A = P%*%U
       B = Q%*%V
@@ -304,11 +305,11 @@ CP_MTS = function(Y,xi = NULL, Rank = NULL, lag.k = 15, lag.ktilde =  10, method
                        "The estimated rankd d2 of the matrix CP-factor model")
       con = structure(list(A = A,B = B,f = f,Rank = rank, method = METHOD),
                       class = "mtscp")
-
+      
       return(con)
-      }
-
     }
+    
+  }
 }
 
 rho2.loss = function(A_hat,A){
@@ -322,51 +323,51 @@ fnorm = function(x){sqrt(sum(x^2))}
 Complex2Real = function(A){
   REA = round(Re(A),8)
   IMA = round(Im(A),8)
-
+  
   real.index  =  which(IMA[1,] == 0)
-
+  
   if(length(real.index) == 0){
     complex_real  =  REA
     complex_image =  IMA
-
+    
     complex_take  = which(duplicated(complex_real[1,]) == T)
-
+    
     real = as.matrix(complex_real[,complex_take])
-
+    
     img  = as.matrix(complex_image[,complex_take])
-
+    
     new_A = cbind(real,img)
   }else{
     real.vector   = REA[,real.index]
-
+    
     complex_real  =  REA[,-real.index]
     complex_image =  IMA[,-real.index]
-
+    
     complex_take  = which(duplicated(complex_real[1,]) == T)
-
+    
     real = as.matrix(complex_real[,complex_take])
-
+    
     img  = as.matrix(complex_image[,complex_take])
-
+    
     new_A = cbind(real.vector,real,img)
-
+    
     colnames(new_A) = NULL
   }
-
+  
   return(new_A)
 }
 
 
 Vec.tensor = function(Y){
   p = dim(Y)[2];q = dim(Y)[3];
-
+  
   if(p == q & q == 1){
     Y_tilde = apply(Y,1,FUN = as.vector)
   }else{
     Y_tilde = t(apply(Y,1,FUN = as.vector))
   }
   return(Y_tilde)
-
+  
 }
 
 
@@ -409,48 +410,48 @@ Vec.tensor = function(Y){
 #' q = 10
 #' n = 400
 #' d = d1 = d2 = 3
-#' data <- DGP.CP(n,p,q,d,d1,d2)
+#' data <- DGP.CP(n,p,q,d1,d2,d)
 #' Y = data$Y
 #' @export
 DGP.CP = function(n,p,q,d1,d2,d){
-
+  
   par_A = c(-3,3)
   par_B = c(-3,3)
   par_X = c(0.6,0.95)
   par_E = 1
-
+  
   Input = list(n = n,p = p,q = q,d1 = d1,d2 = d2,d = d)
-
+  
   A_inl = matrix(runif(p*d,par_A[1],par_A[2]),p,d)
   B_inl = matrix(runif(q*d,par_B[1],par_B[2]),q,d)
-
+  
   svd_A = svd(A_inl)
   P = svd_A$u[,1:d1]
-
+  
   A = (svd_A$u[,1:d1]) %*% diag(svd_A$d[1:d1],nrow = d1,ncol = d1) %*%t(svd_A$v[,1:d1])
-
+  
   U = t(P)%*%apply(A,2,l2s)
-
+  
   A_s = P%*%U
-
-
+  
+  
   svd_B = svd(B_inl)
   Q = svd_B$u[,1:d2]
   B = (svd_B$u[,1:d2]) %*% diag(svd_B$d[1:d2],nrow = d2,ncol = d2) %*% (t(svd_B$v[,1:d2]))
   V = t(Q)%*%apply(B,2,l2s)
-
+  
   B_s = Q%*%V
-
-
+  
+  
   W = matrix(NA,d1*d2,d)
-
+  
   for (ii in 1:d) {
     W[,ii] = V[,ii]%x%U[,ii]
   }
-
+  
   X = array(0,c(n,d,d))
   X_m = matrix(NA,n,d)
-
+  
   signal = runif(d,-1,1)
   signal[signal>=0] <-  1
   signal[signal< 0] <- -1
@@ -459,18 +460,18 @@ DGP.CP = function(n,p,q,d1,d2,d){
     xd = arima.sim(model = list(ar = par_ar[ii]*signal[ii]),n = n)
     X_m[,ii] =  xd*(apply(A, 2, fnorm)*apply(B, 2, fnorm))[ii]
     X[,ii,ii] <- xd*(apply(A, 2, fnorm)*apply(B, 2, fnorm))[ii]
-
+    
   }
-
+  
   S_m = X_m%*%t(W)
   W_star = svd(S_m)$v[,1:d]
-
+  
   Y = S = array(NA,dim = c(n,p,q))
   for (tt in 1:n) {
     S[tt,,] <- A_s%*%X[tt,,]%*%t(B_s)
     Y[tt,,] <- S[tt,,] + matrix(rnorm(p*q,0,par_E),p,q)
   }
-
+  
   return(list(Y      =  Y,
               S      =  S,
               A      =  A_s,
@@ -486,15 +487,15 @@ DGP.CP = function(n,p,q,d1,d2,d){
               Smat    =  S_m,
               Input  =  Input
   ))
-
+  
 }
 
 
 Autocov_xi_Y = function(Y,xi,lag.k = k){
-
+  
   n = dim(Y)[1]
   k = lag.k
-
+  
   Y_mean = 0
   xi_mean = 0
   for (ii in 1:n) {
@@ -503,7 +504,7 @@ Autocov_xi_Y = function(Y,xi,lag.k = k){
   }
   Y_mean   = Y_mean/n
   xi_mean = xi_mean/n
-
+  
   Sigma_Y_xi_k = 0
   for (ii in (k+1):n) {
     Sigma_Y_xi_k = Sigma_Y_xi_k + (Y[ii,,] - Y_mean)*(xi[ii-k] - xi_mean)
@@ -511,74 +512,67 @@ Autocov_xi_Y = function(Y,xi,lag.k = k){
   return(Sigma_Y_xi_k/(n-k))
 }
 
-est.xi  = function(Y, thresh_per = 0.99){
-
+est.xi  = function(Y, thresh_per = 0.99, d_max = 20){
+  
   n = dim(Y)[1];p = dim(Y)[2];q = dim(Y)[3];
-
+  
   xi.mat = Vec.tensor(Y)
-
-  xi.mat = scale(xi.mat,scale = F)
-
+  
   if(n > p*q){
     eig_xi.mat = eigen(MatMult(t(xi.mat),xi.mat))
     cfr =  cumsum(eig_xi.mat$values)/sum(eig_xi.mat$values)
     d_hat = min(which(cfr > thresh_per))
-    w_hat = eig_xi.mat$vectors[,1:d_hat]
-
+    d_fin = min(d_max,d_hat)
+    w_hat = eig_xi.mat$vectors[,1:d_fin]
     xi.f = xi.mat%*%w_hat
-
     xi   = rowMeans(xi.f)
-
   }else{
     eig_xi.mat = eigen(MatMult(xi.mat,t(xi.mat)))
     cfr = cumsum(eig_xi.mat$values)/sum(eig_xi.mat$values)
     d_hat = min(which(cfr > thresh_per))
-    xi.f1 = as.matrix(eig_xi.mat$vectors[,1:d_hat])
-
+    d_fin = min(d_max,d_hat)
+    xi.f1 = as.matrix(eig_xi.mat$vectors[,1:d_fin])
     weight = sqrt(eig_xi.mat$values[1:d_hat])
-
     xi.f1 = xi.f1%*%diag(weight)
-
     xi = rowMeans(xi.f1)
-
   }
   return(xi)
 }
 
 est.d1d2.PQ = function(Y,xi,K = 10){
   n = dim(Y)[1];p = dim(Y)[2];q = dim(Y)[3];
-
+  
   d2_list = d1_list =vector()
   M1 = M2 = 0
   dmax = round(min(p,q)*0.75)
   P_list = Q_list = list()
   for (kk in 1:K){
-
+    
     S_yxi_k = Autocov_xi_Y(Y,xi,lag.k = kk)
-
+    
     M1 = M1 + S_yxi_k%*%t(S_yxi_k)
     M2 = M2 + t(S_yxi_k)%*%S_yxi_k
-
+    
     ev_M1 = eigen(M1)
     ev_M2 = eigen(M2)
-
+    
     d1_list[kk] =  which.max(ev_M1$values[1:dmax]/ev_M1$values[2:(dmax+1)])
     d2_list[kk] =  which.max(ev_M2$values[1:dmax]/ev_M2$values[2:(dmax+1)])
-
+    
     P_list[[kk]] = ev_M1$vectors[,1:(d1_list[kk])]
     Q_list[[kk]] = ev_M2$vectors[,1:(d2_list[kk])]
-
+    
   }
-
+  
   d1_list[1] = 0
   d2_list[1] = 0
-
-
+  
+  
   d1_hat =  d1_list[K]
   d2_hat =  d2_list[K]
   P_hat  =  P_list[[K]]
   Q_hat  =  Q_list[[K]]
-
+  
   return(list(d1_hat  = d1_hat,
               d2_hat  = d2_hat,
               P_hat   = P_hat,
@@ -591,28 +585,28 @@ est.d1d2.PQ = function(Y,xi,K = 10){
 
 est.PQ = function(Y,xi,d1,d2,K = 20){
   n = dim(Y)[1];p = dim(Y)[2];q = dim(Y)[3];
-
+  
   M1 = M2 = 0
   dmax = round(min(p,q)*0.75)
   P_list = Q_list = list()
   for (kk in 1:K){
-
+    
     S_yxi_k = Autocov_xi_Y(Y,xi,lag.k = kk)
-
+    
     M1 = M1 + S_yxi_k%*%t(S_yxi_k)
     M2 = M2 + t(S_yxi_k)%*%S_yxi_k
-
+    
     ev_M1 = eigen(M1)
     ev_M2 = eigen(M2)
-
+    
     P_list[[kk]] = ev_M1$vectors[,1:(d1)]
     Q_list[[kk]] = ev_M2$vectors[,1:(d2)]
-
+    
   }
-
+  
   P_hat  =  P_list[[K]]
   Q_hat  =  Q_list[[K]]
-
+  
   return(list(P_hat   = P_hat,
               Q_hat   = Q_hat,
               P_list  = P_list,
@@ -623,44 +617,44 @@ est.PQ = function(Y,xi,d1,d2,K = 20){
 est.d.Wf = function(Y,P,Q, Ktilde = 10){
   n = dim(Y)[1];p = dim(Y)[2];q = dim(Y)[3];
   d1 = NCOL(P);d2 = NCOL(Q);
-
+  
   Z = array(NA,dim = c(n,d1,d2))
   for (tt in 1:n) {
     Z[tt,,] = t(P)%*%Y[tt,,]%*%Q
   }
-
+  
   Z_tilde = Vec.tensor(Z)
-
+  
   M = 0
   W_list = f_list = list()
   d_list = vector()
   dmax = d1*d2
   dstar = max(d1,d2)
-
+  
   for (kk in 1:Ktilde) {
-
+    
     S_ztilde_k = sigmak(t(Z_tilde),as.matrix(colMeans(Z_tilde)),n = n, k= kk)
-
+    
     M = M + S_ztilde_k%*%t(S_ztilde_k)
-
+    
     ev_M = eigen(M)
-
+    
     evalues = ev_M$values
-
-
+    
+    
     d_list[kk] =  max(which.max(evalues[1:(dmax-1)]/evalues[2:(dmax)]),dstar)
-
+    
     W_list[[kk]] = ev_M$vectors[,1:(d_list[kk])]
-
+    
     f_list[[kk]] = Z_tilde%*%(W_list[[kk]])
   }
-
+  
   d_list[1]  = 0
-
+  
   d_hat  =  d_list[Ktilde]
   W_hat  =  W_list[[Ktilde]]
   f_hat  =  f_list[[Ktilde]]
-
+  
   return(list(d_hat   = d_hat,
               W_hat   = W_hat,
               f_hat   = f_hat,
@@ -672,39 +666,39 @@ est.d.Wf = function(Y,P,Q, Ktilde = 10){
 
 est.d.Wf.nPQ = function(Z, Ktilde = 10){
   n = dim(Z)[1];d1 = dim(Z)[2];d2 = dim(Z)[3];
-
+  
   Z_tilde = Vec.tensor(Z)
-
+  
   M = 0
   W_list = f_list = list()
   d_list = vector()
   dmax = d1*d2
   dstar = max(d1,d2)
   for (kk in 1:Ktilde){
-
+    
     S_ztilde_k = sigmak(t(Z_tilde),as.matrix(colMeans(Z_tilde)),n = n, k= kk)
-
+    
     M = M + S_ztilde_k%*%t(S_ztilde_k)
-
+    
     ev_M = eigen(M)
-
+    
     evalues = ev_M$values
-
+    
     d_list[kk] =  max(which.max(evalues[1:(dmax-1)]/evalues[2:(dmax)]),dstar)
-
+    
     W_list[[kk]] = ev_M$vectors[,1:d_hat]
-
+    
     f_list[[kk]] = Z_tilde%*%(W_list[[kk]])
   }
-
+  
   d_list[1]  = 0
-
-
+  
+  
   d_hat  =  d_list[Ktilde]
   W_hat  =  W_list[[Ktilde]]
   f_hat  =  f_list[[Ktilde]]
-
-
+  
+  
   return(list(d_hat   = d_hat,
               W_hat   = W_hat,
               f_hat   = f_hat,
@@ -717,31 +711,31 @@ est.d.Wf.nPQ = function(Z, Ktilde = 10){
 est.Wf = function(Y,P,Q,d,Ktilde = 10){
   n = dim(Y)[1];p = dim(Y)[2];q = dim(Y)[3];
   d1 = NCOL(P);d2 = NCOL(Q);
-
+  
   Z = array(NA,dim = c(n,d1,d2))
   for (tt in 1:n) {
     Z[tt,,] = t(P)%*%Y[tt,,]%*%Q
   }
-
+  
   Z_tilde = matrix(NA,n,d1*d2)
   for (tt in 1:n) {
     Z_tilde[tt,] = as.vector(Z[tt,,])
   }
-
+  
   M = 0
   W_list = f_list = list()
-
+  
   for (kk in 1:Ktilde){
     S_ztilde_k = sigmak(t(Z_tilde),as.matrix(colMeans(Z_tilde)),n = n, k= kk)
-
+    
     M = M + S_ztilde_k%*%t(S_ztilde_k)
-
+    
     ev_M = eigen(M)
-
+    
     W_list[[kk]] = ev_M$vectors[,1:d]
     f_list[[kk]] = Z_tilde%*%(W_list[[kk]])
   }
-
+  
   W_hat  =  W_list[[Ktilde]]
   f_hat  =  f_list[[Ktilde]]
   return(list(W_hat   = W_hat,
@@ -752,9 +746,9 @@ est.Wf = function(Y,P,Q,d,Ktilde = 10){
 
 
 est.UV.JAD = function(W,d1,d2,d){
-
+  
   W_tilde_tol = array(NA,dim= c(d,d1,d2))
-
+  
   for (jj in 1:d){
     W_tilde_i = matrix(NA,d1,d2)
     for (pp in 1:d2){
@@ -764,7 +758,7 @@ est.UV.JAD = function(W,d1,d2,d){
     }
     W_tilde_tol[jj,,] = W_tilde_i
   }
-
+  
   P_tol = vector()
   for (ss in 1:d) {
     for(rr in ss:d){
@@ -776,7 +770,7 @@ est.UV.JAD = function(W,d1,d2,d){
       P_tol = cbind(P_tol,P_rs)
     }
   }
-
+  
   M_tol    = svd(P_tol)$v
   dt       = NCOL(M_tol)
   M        = M_tol[,(dt-d+1):dt]
@@ -786,47 +780,47 @@ est.UV.JAD = function(W,d1,d2,d){
     M_tensor[,,ii] = Vech2Mat_new(M[,ii],d)
     eigen_gap[ii] = min(abs(eigen(M_tensor[,,ii])$values))
   }
-
-
+  
+  
   ##construct H_star
   Ms = M_tensor[,,which.max(eigen_gap)]
-
+  
   HH0 = vector()
   HH1 = vector()
   HH2 = vector()
-
+  
   for (ii in 1:d) {
     HH0 = cbind(HH0,c(M_tensor[,,ii]))
     HH1 = cbind(HH1,c(solve(Ms)%*%M_tensor[,,ii]))
     HH2 = cbind(HH2,c(M_tensor[,,ii]%*%solve(Ms)))
   }
-
+  
   PP = (t(HH0)%*%HH2)%*%solve(t(HH1)%*%HH2 + t(HH2)%*%HH1)%*%(t(HH2)%*%HH0)
-
+  
   EVD = eigen(PP)
   if( min(EVD$values) < 0){
     R_NOJD = EVD$vectors
   }else{
     R_NOJD = sqrt(2)/2*(EVD$vectors)%*%diag((EVD$values)^{-1/2})%*%t(EVD$vectors)
   }
-
+  
   M_1 = M%*%R_NOJD
-
+  
   M_tensor_1 = array(NA,dim = c(d,d,d))
   for (ii in 1:d) {
     M_tensor_1[,,ii] = Vech2Mat_new(M_1[,ii],d)
-
+    
   }
-
+  
   H = jointDiag::ffdiag(M_tensor_1)$B ## jointDiag::ffdiag
-
+  
   Theta = apply(MASS::ginv(H), 2, l2s)
-
+  
   Wt = W%*%Theta
-
+  
   U = matrix(NA,d1,d)
   V = matrix(NA,d2,d)
-
+  
   for (jj in 1:d){
     Wt_tilde_i = matrix(NA,d1,d2)
     for (pp in 1:d2){
@@ -838,15 +832,15 @@ est.UV.JAD = function(W,d1,d2,d){
     U[,jj] = svdi$u[,1]
     V[,jj] = svdi$v[,1]
   }
-
+  
   return(list(U = U,V = V,Theta = Theta))
-
+  
 }
 
 est.UV.EVD = function(W,d1,d2,d){
-
+  
   W_tilde_tol = array(NA,dim= c(d,d1,d2))
-
+  
   for (jj in 1:d){
     W_tilde_i = matrix(NA,d1,d2)
     for (pp in 1:d2){
@@ -856,7 +850,7 @@ est.UV.EVD = function(W,d1,d2,d){
     }
     W_tilde_tol[jj,,] = W_tilde_i
   }
-
+  
   P_tol = vector()
   for (ss in 1:d) {
     for(rr in ss:d){
@@ -872,38 +866,38 @@ est.UV.EVD = function(W,d1,d2,d){
   M_tol    = svd(P_tol)$v
   dt       = NCOL(M_tol)
   M_org        = M_tol[,(dt-d+1):dt]
-
-
+  
+  
   M  = M_org
-
+  
   M_tensor = array(NA,dim = c(d,d,d))
-
+  
   for (ii in 1:d) {
-      M_tensor[,,ii] = Vech2Mat_new(M[,ii],d)
-    }
-
+    M_tensor[,,ii] = Vech2Mat_new(M[,ii],d)
+  }
+  
   L0 = L1 = 0
   for (tt in 1:(d-1)) {
-      L0 = L0 + M_tensor[,,tt]
-      L1 = L1 + M_tensor[,,tt + 1]
+    L0 = L0 + M_tensor[,,tt]
+    L1 = L1 + M_tensor[,,tt + 1]
   }
-
+  
   L0 = L0/(d-1)
   L1 = L1/(d-1)
-
+  
   theta.l = eigen(solve(L1)%*%L0)$vectors
-
+  
   Theta = apply(L0%*%theta.l,2,l2s)
-
+  
   if(is.complex(Theta)){
     Theta = Complex2Real(Theta)
   }
-
+  
   Wt = W%*%Theta
-
+  
   U = matrix(NA,d1,d)
   V = matrix(NA,d2,d)
-
+  
   for (jj in 1:d){
     Wt_tilde_i = matrix(NA,d1,d2)
     for (pp in 1:d2){
@@ -915,7 +909,7 @@ est.UV.EVD = function(W,d1,d2,d){
     U[,jj] = svdi$u[,1]
     V[,jj] = svdi$v[,1]
   }
-
+  
   return(list(U = U,V = V,Theta = Theta))
-
+  
 }

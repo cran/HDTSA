@@ -1,12 +1,12 @@
 Package: HDTSA
 Type: Package
 Title: High Dimensional Time Series Analysis Tools
-Version: 1.0.3
+Version: 1.0.4
 Authors@R: c(person("Chen", "Lin", role = c("aut", "cre"), 
     email = "linchen@smail.swufe.edu.cn"),
-    person("Jinyuan", "Chang", role = "aut", email = "changjinyuan.swufe.edu.cn"),
+    person("Jinyuan", "Chang", role = "aut", email = "changjinyuan@swufe.edu.cn"),
     person("Qiwei ", "Yao", role = "aut", email = "q.yao@lse.ac.uk"))
-Date: 2024-06-04
+Date: 2024-09-03
 Author: Chen Lin [aut, cre],
   Jinyuan Chang [aut],
   Qiwei Yao [aut]
@@ -35,5 +35,5 @@ Encoding: UTF-8
 URL: https://github.com/Linc2021/HDTSA
 BugReports: https://github.com/Linc2021/HDTSA/issues
 Repository: CRAN
-Packaged: 2024-06-04 09:24:32 UTC; linchen
-Date/Publication: 2024-06-04 15:30:16 UTC
+Packaged: 2024-09-03 08:33:24 UTC; linchen
+Date/Publication: 2024-09-03 09:00:01 UTC
