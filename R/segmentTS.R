@@ -1,23 +1,22 @@
 #' @importFrom stats var
-#' @importFrom clime clime cv.clime
+#' @importFrom clime clime cv.clime tracel2
 #' @useDynLib HDTSA
 #' @importFrom Rcpp sourceCpp
 #' @importFrom Rcpp evalCpp
-#' @import Rcpp 
 
 
 segmentTS <- function(Y, lag.k, 
                       thresh = FALSE, 
-                      tuning.vec = NULL, 
-                      K = 5)
+                      delta = 2 * sqrt(log(ncol(Y)) / nrow(Y)),
+                      opt = 1,
+                      control = list()
+                      )
 {
   n=nrow(Y)
   p=ncol(Y)
-  storage.mode(p)<-"integer"
-  storage.mode(n)<-"integer"
   
   # Part I -- standardize Y  such that var(y_t)=I_p
-  if(p<n)
+  if(opt == 1)
   {
     M <- var(Y)
     t <- eigen(M, symmetric = T)
@@ -25,22 +24,27 @@ segmentTS <- function(Y, lag.k,
     G <- as.matrix(t$vectors)
     D <- G * 0
     for (i in 1:p) {
-      if (ev[i] > 0)
+      if (ev[i] > 1e-4)
         D[i, i] <- sqrt(1 / ev[i])
       else {
         D[i, i] <- 1 / sqrt(log(p) / n)
-        #print("Data are degenerate")
-        #quit("yes")
       }
     }
   }
-  else{
+  else if(opt == 2){
     #print('now use clime to calculate')
-    M <- clime(Y, nlambda=10, standardize = FALSE, linsolver = "simplex")
+    con <- list(nlambda = 100, lambda.max = 0.8, lambda.min = ifelse(n>p,1e-4,1e-2),
+                standardize = FALSE, linsolver = "primaldual")
+    con[(namc <- names(control))] <- control
+    
+    
+    M <- clime(Y, nlambda=con$nlambda, standardize = con$standardize,
+               lambda.max = con$lambda.max, lambda.min = con$lambda.min,
+               linsolver = con$linsolver)
     M <- clime::cv.clime(M, loss = "tracel2")
     #print(M$lambda)
     #print(M$lambdaopt)
-    M <- clime(Y, lambda = M$lambdaopt)
+    M <- clime(Y, standardize = con$standardize, lambda = M$lambdaopt)
     e <- unlist(M$Omega)
     names(e) <- NULL
     M <- matrix(e,nrow = p)
@@ -51,7 +55,7 @@ segmentTS <- function(Y, lag.k,
     # square root of eigenvalues
     for(i in 1:p)
     {
-      if(ev[i] < 0)D[i, i] <- sqrt(log(p) / n)
+      if(ev[i] <  1e-4 | ev[i] > 1e+4)D[i, i] <- sqrt(log(p) / n)
       else D[i, i]=sqrt(ev[i])
     }
   }
@@ -66,96 +70,19 @@ segmentTS <- function(Y, lag.k,
 
   
   mean_y<-as.matrix(rowMeans(Y))
-  storage.mode(Y)<-"double"
-  storage.mode(mean_y)<-"double"
   
   Wy=diag(rep(1,p))
-
-  if(!thresh)
-  {
-    for(k in 1:lag.k) {
-      Sigma_y<-sigmak(Y,mean_y,k,n)
+  
+  for (k in 1:lag.k) {
+    Sigma_y<-sigmak(Y,mean_y,k,n)
+    if(!thresh)
       Wy=Wy+MatMult(Sigma_y,t(Sigma_y))
-      #S=cov(t(Y[,1:(n-k)]),t(Y[,(1+k):n])); Wy=Wy+S%*%t(S)
-    }
-  }
-  
-  # Segment with thresholding
-  
-  if(thresh)
-  {
-    # Using the cross validation for thresholding
-    
-    for(k in 1:lag.k)
-    {
-      error=NULL
-      storage.mode(k)<-"integer"
-      if(is.null(tuning.vec))
-      {
-        tuning.vec=2
-        deltafinal=tuning.vec
-      }
-      else{
-        
-        # To select proper threshold parameter
-        if(length(tuning.vec)>1){
-          for(v in 1:K)
-          {
-            sample1=sample(1:n,size=n/2)
-            sample2=c(1:n)[-sample1]
-            sampleY1=Y[,sample1]
-            sampleY2=Y[,sample2]
-            
-            mean_y1<-as.matrix(rowMeans(sampleY1))
-            mean_y2<-as.matrix(rowMeans(sampleY2))
-            
-            storage.mode(mean_y1)<-"double"
-            storage.mode(sampleY1)<-"double"
-            storage.mode(mean_y2)<-"double"
-            storage.mode(sampleY2)<-"double"
-            n1=ceiling(n/2)
-            storage.mode(n1)<-"integer"
-            storage.mode(p)<-"integer"
-            
-            errors=NULL
-            
-            for(d in 1:length(tuning.vec))
-            {
-              delta1=tuning.vec[d]
-              storage.mode(delta1)<-"double"
-              
-              Sigma_y1 <- sigmak(sampleY1,mean_y1,k,n1)
-              Sigma_y2 <- sigmak(sampleY2,mean_y2,k,n1)
-              
-              storage.mode(Sigma_y1)<-"double"
-              storage.mode(Sigma_y2)<-"double"
-              
-              Sigma_ythres1 <- thresh_C(Sigma_y1, sampleY1, mean_y1, k, n1, p, delta1)
-              
-              errors=c(errors,(norm((Sigma_ythres1-Sigma_y2),type="F"))^2)
-            }
-            error=rbind(error,errors)
-          }
-          errormean=colMeans(error)
-          d=which.min(errormean)
-          deltafinal=tuning.vec[d]
-        }
-      }
-      # Find the best tuning parameter
-      
-      #res<-.Fortran("segment",Y,mean_y,k,n,p,res=numeric(p^2))$res
-      Sigma_y <- sigmak(Y,mean_y,k,n)
-      storage.mode(Sigma_y)<-"double"
-      storage.mode(deltafinal)<-"double"
-      
-      # Carry out the final thresholding
-      
-      Sigma_ynew <- thresh_C(Sigma_y, Y, mean_y, k, n, p, deltafinal)
-      
+    else {
+      Sigma_ynew <- thresh_C(Sigma_y, delta)
       Wy=Wy+MatMult(Sigma_ynew,t(Sigma_ynew))
     }
   }
-  # Segment without thresholding
+  
   t=eigen(Wy, symmetric=T)
   G=as.matrix(t$vectors)
   Y1=MatMult(t(G),Y)

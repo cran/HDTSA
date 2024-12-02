@@ -9,16 +9,16 @@ MartG_ftC <- function(n, k, p, d, X, Xj) {
     .Call('_HDTSA_MartG_ftC', PACKAGE = 'HDTSA', n, k, p, d, X, Xj)
 }
 
-MartG_bootc <- function(n, k, p, d, B, bn, method, ft) {
-    .Call('_HDTSA_MartG_bootc', PACKAGE = 'HDTSA', n, k, p, d, B, bn, method, ft)
+MartG_bootc <- function(n, k, p, d, B, bn, method, ft, Xi_temp) {
+    .Call('_HDTSA_MartG_bootc', PACKAGE = 'HDTSA', n, k, p, d, B, bn, method, ft, Xi_temp)
 }
 
 sigmak <- function(Y, Y_mean, k, n) {
     .Call('_HDTSA_sigmak', PACKAGE = 'HDTSA', Y, Y_mean, k, n)
 }
 
-thresh_C <- function(sigmaY, Y, Y_mean, k, n, p, deltafinal) {
-    .Call('_HDTSA_thresh_C', PACKAGE = 'HDTSA', sigmaY, Y, Y_mean, k, n, p, deltafinal)
+thresh_C <- function(mat, delta) {
+    .Call('_HDTSA_thresh_C', PACKAGE = 'HDTSA', mat, delta)
 }
 
 MatMult <- function(A, B) {
@@ -33,8 +33,8 @@ WN_ftC <- function(n, k, p, X, X_mean) {
     .Call('_HDTSA_WN_ftC', PACKAGE = 'HDTSA', n, k, p, X, X_mean)
 }
 
-WN_bootc <- function(n, k, p, B, bn, method, ft, X, sigma_zero) {
-    .Call('_HDTSA_WN_bootc', PACKAGE = 'HDTSA', n, k, p, B, bn, method, ft, X, sigma_zero)
+WN_bootc <- function(n, k, p, B, bn, method, ft, X, sigma_zero, Xi_temp) {
+    .Call('_HDTSA_WN_bootc', PACKAGE = 'HDTSA', n, k, p, B, bn, method, ft, X, sigma_zero, Xi_temp)
 }
 
 bandwith <- function(ft, k, p, d, ken_type) {
@@ -77,8 +77,16 @@ SpecEstC <- function(Gamma, n, p, r, K, cross_indices, J_set, l_band, flag_c) {
     .Call('_HDTSA_SpecEstC', PACKAGE = 'HDTSA', Gamma, n, p, r, K, cross_indices, J_set, l_band, flag_c)
 }
 
+TestStatC <- function(Gamma, n, p, r, K, cross_indices, J_set, l_band, flag_c) {
+    .Call('_HDTSA_TestStatC', PACKAGE = 'HDTSA', Gamma, n, p, r, K, cross_indices, J_set, l_band, flag_c)
+}
+
 CEst2C <- function(x, Gamma, n_tilde, n, p, r, cross_indices, l_band) {
     .Call('_HDTSA_CEst2C', PACKAGE = 'HDTSA', x, Gamma, n_tilde, n, p, r, cross_indices, l_band)
+}
+
+CEst3C <- function(x, Gamma, n_tilde, n, p, r, cross_indices, l_band) {
+    .Call('_HDTSA_CEst3C', PACKAGE = 'HDTSA', x, Gamma, n_tilde, n, p, r, cross_indices, l_band)
 }
 
 BandEstC <- function(Chat, n_tilde, r, l_band, type) {
@@ -91,6 +99,10 @@ etaC <- function(n, p, B, n_tilde, bn, type) {
 
 LongCovEstC <- function(n_tilde, ln, r, Shat_c, Chat, Kern) {
     .Call('_HDTSA_LongCovEstC', PACKAGE = 'HDTSA', n_tilde, ln, r, Shat_c, Chat, Kern)
+}
+
+TestStarC <- function(x, GhatC, n_tilde, n, p, r, K, flag_c, cross_indices, J_set, l_band, B_monte, type) {
+    .Call('_HDTSA_TestStarC', PACKAGE = 'HDTSA', x, GhatC, n_tilde, n, p, r, K, flag_c, cross_indices, J_set, l_band, B_monte, type)
 }
 
 minor_P <- function(Wr, Ws, d1, d2) {

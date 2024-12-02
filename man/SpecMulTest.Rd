@@ -2,36 +2,44 @@
 % Please edit documentation in R/Tools_SpecTest.R
 \name{SpecMulTest}
 \alias{SpecMulTest}
-\title{Statistical inference for high-dimensional spectral density matrix}
+\title{Multiple testing with FDR control for spectral density matrix}
 \usage{
 SpecMulTest(Q, PVal, alpha = 0.05, seq_len = 0.01)
 }
 \arguments{
-\item{Q}{Number of the hypothesis tests.}
+\item{Q}{The number of the hypothesis tests.}
 
-\item{PVal}{P-values for the \eqn{Q} hypothesis tests, a \eqn{Q} vector.}
+\item{PVal}{A vector of length \eqn{Q} representing p-values of the \eqn{Q} hypothesis tests.}
 
-\item{alpha}{The prescribed significance level. Default is 0.05.}
+\item{alpha}{The prescribed level for the FDR control. The default is 0.05.}
 
-\item{seq_len}{Length used to take discrete points between 0 and 
-\eqn{\sqrt(2\times\log(Q)-2\times\log(\log(Q))}. Default is 0.01.}
+\item{seq_len}{The step size for generating a sequence from 0 to
+\eqn{\sqrt{2\times\log Q-2\times\log(\log Q )}}. The default is 0.01.}
 }
 \value{
-An object of class "hdtstest" is a list containing the following
-  components:
-  \item{MultiTest}{Logical vector with length Q. If the element is \code{TRUE}, 
-  it means rejecting the corresponding sub-null hypothesis, otherwise it means 
-  not rejecting the corresponding sub-null hypothesis.}
+An object of class \code{"hdtstest"}, which contains the following
+  component:
+  \item{MultiTest}{A logical vector of length \eqn{Q}. If its \eqn{q}-th element is \code{TRUE}, 
+  it indicates that \eqn{H_{0,q}} should be rejected. Otherwise,
+  \eqn{H_{0,q}} should not be rejected.}
 }
 \description{
-\code{SpecMulTest()} implements a new multiple test proposed in
- Chang, Jiang, McElroy and Shao (2023) for the \eqn{Q} hypothesis testing problems: 
+\code{SpecMulTest()} implements a new multiple testing procedure proposed in
+ Chang et al. (2022) for the following \eqn{Q} hypothesis testing problems: 
 \deqn{H_{0,q}:f_{i,j}(\omega)=0\mathrm{\ for\ any\ }(i,j)\in\mathcal{I}^{(q)}\mathrm{\ and\ }
 \omega\in\mathcal{J}^{(q)}\mathrm{\ \ versus\ \ }
-H_{1,q}:H_{0,q}\mathrm{\ is\ not\ true.} }
-for \eqn{q\in\{1,\dots,Q\}}.
+H_{1,q}:H_{0,q}\mathrm{\ is\ not\ true} }
+for \eqn{q=1,\dots,Q}. 
+Here, \eqn{f_{i,j}(\omega)} represents the cross-spectral density between 
+\eqn{ x_{t,i}} and \eqn{ x_{t,j}} at frequency \eqn{\omega} with \eqn{x_{t,i}} being 
+the \eqn{i}-th component of the \eqn{p \times 1} times series \eqn{{\bf x}_t},
+and \eqn{\mathcal{I}^{(q)}} and \eqn{\mathcal{J}^{(q)}} refer to
+the set of index pairs and the set of frequencies associated with the
+\eqn{q}-th test, respectively.
 }
 \examples{
+# Example 1
+## Generate xt
 n <- 200
 p <- 10
 flag_c <- 0.8
@@ -42,24 +50,32 @@ phi.mat <- 0.4*diag(p)
 x.sim <- phi.mat \%*\% z.sim[,(burn+1):(burn+n)]
 x <- x.sim - rowMeans(x.sim)
 Q <- 4
+
+## Generate the sets Iq and Jq
 ISET <- list()
 ISET[[1]] <- matrix(c(1,2),ncol=2)
 ISET[[2]] <- matrix(c(1,3),ncol=2)
 ISET[[3]] <- matrix(c(1,4),ncol=2)
 ISET[[4]] <- matrix(c(1,5),ncol=2)
 JSET <- as.list(2*pi*seq(0,3)/4 - pi)
+
+## Calculate Q p-values
 PVal <- rep(NA,Q)
 for (q in 1:Q) {
   cross.indices <- ISET[[q]]
   J.set <- JSET[[q]]
   temp.q <- SpecTest(t(x), J.set, cross.indices, B, flag_c)
   PVal[q] <- temp.q$p.value
-}  # Q
+}
 res <- SpecMulTest(Q, PVal)
 res
 
 }
 \references{
-Chang, J., Jiang, Q., McElroy, T. & Shao, X. (2023). 
-\emph{Statistical inference for high-dimensional spectral density matrix}.
+Chang, J., Jiang, Q., McElroy, T. S., & Shao, X. (2022). 
+Statistical inference for high-dimensional spectral density matrix.
+\emph{arXiv preprint}. \doi{doi:10.48550/arXiv.2212.13686}.
+}
+\seealso{
+\code{\link{SpecTest}}
 }
